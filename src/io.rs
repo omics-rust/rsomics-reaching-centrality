@@ -36,29 +36,30 @@ pub fn read_edgelist(path: Option<&Path>, directed: bool) -> Result<Graph> {
     read_edges(reader, directed)
 }
 
-/// Parse an edge list from any reader: `#`/blank lines skipped, first two
-/// whitespace tokens per line are `u v`, extras ignored, self-loops dropped,
-/// parallel edges collapsed. `u v` means the edge `u -> v`; when `directed` is
-/// false the reverse `v -> u` is added as well.
+/// Parse an edge list from any reader, `nx.parse_edgelist` style: everything from
+/// the first `#` on a line is a comment and dropped; blank lines and lines with
+/// fewer than two tokens are skipped; the first two whitespace tokens are `u v`,
+/// extras ignored, self-loops dropped, parallel edges collapsed. `u v` means the
+/// edge `u -> v`; when `directed` is false the reverse `v -> u` is added as well.
 pub fn read_edges<R: BufRead>(reader: R, directed: bool) -> Result<Graph> {
     let mut labels: Vec<String> = Vec::new();
     let mut index: HashMap<String, u32> = HashMap::new();
     let mut raw: Vec<(u32, u32)> = Vec::new();
 
-    for (lineno, line) in reader.lines().enumerate() {
+    for line in reader.lines() {
         let line = line.map_err(RsomicsError::Io)?;
-        let t = line.trim();
-        if t.is_empty() || t.starts_with('#') {
+        // nx.parse_edgelist truncates at the first '#' before tokenising, so a
+        // '#' anywhere on the line starts a comment; a line left with fewer than
+        // two tokens is skipped, not an error.
+        let t = line.split('#').next().unwrap_or("").trim();
+        if t.is_empty() {
             continue;
         }
         let mut tok = t.split_ascii_whitespace();
         let u_str = tok.next().unwrap();
-        let v_str = tok.next().ok_or_else(|| {
-            RsomicsError::InvalidInput(format!(
-                "line {}: expected two node labels, got one",
-                lineno + 1
-            ))
-        })?;
+        let Some(v_str) = tok.next() else {
+            continue;
+        };
         if u_str == v_str {
             continue;
         }

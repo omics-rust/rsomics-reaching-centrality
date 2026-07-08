@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-reaching-centrality"
-version = "0.1.0"
+version = "0.1.1"
 description = "Global + local reaching centrality (Mones-Vicsek-Vicsek 2012) — value-exact networkx equivalent"
 edition = "2021"
 rust-version = "1.74"
